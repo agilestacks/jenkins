@@ -35,7 +35,7 @@ if(BUCKET_KIND.trim() == ("s3") && !CONTAINER_NAME.trim().isEmpty() && !CONTAINE
     S3BlobStore provider = new S3BlobStore();
     S3BlobStoreConfig config = S3BlobStoreConfig.get();
     config.setContainer(CONTAINER_NAME);
-    config.setPrefix(CONTAINER_PREFIX+"/");
+    config.setPrefix(CONTAINER_PREFIX);
     config.doValidateS3BucketConfig(CONTAINER_NAME,CONTAINER_PREFIX);
 
     JCloudsArtifactManagerFactory artifactManagerFactory = new JCloudsArtifactManagerFactory(provider);
