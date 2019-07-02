@@ -62,6 +62,13 @@ if (client.masterUrl && client.namespace) {
     }
 }
 
+def configapStorage = client.
+    configMaps().
+    withLabels([
+        project: 'jenkins',
+        qualifier: 'storage-config'
+    ]).list().items[0]?.data
+
 def jenkHost  = System.getenv('JENKINS_SERVICE_HOST')
 def jenkPort  = System.getenv('JENKINS_SERVICE_PORT') ?: '8080'
 def jenkJnlp  = System.getenv('JENKINS_SERVICE_JNLP') ?: '50000'
@@ -113,18 +120,24 @@ pod1.volumes = [
 ]
 pod1.containers  = [ jnlp ]
 
+def pod2Volumes = []
+pod2Volumes.add(new HostPathVolume("/var/run/docker.sock", "/var/run/docker.sock"))
+pod2Volumes.add(new EmptyDirVolume('/var/lib/docker', false))
+
+def BUCKET_KIND =  configapStorage?.BUCKET_KIND ?: ''
+def NFS_PVC_NAME =  configapStorage?.NFS_PVC_NAME ?: ''
+
+if(BUCKET_KIND.trim() == ("ceph") && !NFS_PVC_NAME.trim().isEmpty() ){
+    pod2Volumes.add(new PersistentVolumeClaim('/home/jenkins/workspace', NFS_PVC_NAME, false))
+}
+
 def pod2         = new PodTemplate()
 pod2.name        = 'toolbox'
 pod2.label       = pod2.name
 pod2.namespace   = client.namespace
 pod2.inheritFrom = pod1.name
 pod2.containers  = [ toolbox ]
-pod2.volumes     = [
-  // new EmptyDirVolume('/home/jenkins', false),
-  // new PersistentVolumeClaim('/home/jenkins/workspace', 'workspace-volume', false),
-  new HostPathVolume("/var/run/docker.sock", "/var/run/docker.sock"),
-  new EmptyDirVolume('/var/lib/docker', false),
-]
+pod2.volumes     = pod2Volumes
 kube.templates  = [ pod1, pod2 ]
 jenk.clouds << kube
 jenk.save()
